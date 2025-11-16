@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computational Science & HPC Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="cat-bf.png">
+
+    <!-- Import NEW Google Fonts: Orbitron for headings, Lato for body and descriptions -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Lato:wght@400;700&display=swap">
+    <style>
+        /* Base styles and variables for Light Theme */
+        :root {
+            --primary-font: 'Orbitron', sans-serif;
+            --secondary-font: 'Lato', sans-serif;
+            --text-color: #1a1a1a;
+            --secondary-text-color: #6b7280;
+            --background-color: #ffffff;
+            --accent-color: #000000;
+            --hover-color: #ffffff;
+            --hover-bg-color: #000000;
+            --border-color: #e5e7eb;
+            --card-bg-color: #f3f4f6;
+            --card-hover-bg-color: #e5e7eb;
+            /* New variable for button hover */
+            --button-hover-bg-color: #4b5563;
+        }
+
+        /* Dark theme variables */
+        body.dark-theme {
+            --text-color: #e5e7eb;
+            --secondary-text-color: #9ca3af;
+            --background-color: #1a1a1a;
+            --accent-color: #f3f4f6;
+            --hover-color: #000000;
+            --hover-bg-color: #ffffff;
+            --border-color: #4b5563;
+            --card-bg-color: #2d3748;
+            --card-hover-bg-color: #4a5568;
+            /* New variable for button hover */
+            --button-hover-bg-color: #f3f4f6;
+        }
+
+        /* Basic reset and typography */
+        body {
+            font-family: var(--secondary-font);
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            cursor: none;
+            overflow-x: hidden;
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--primary-font);
+            font-weight: 700;
+            color: var(--accent-color);
+            transition: color 0.3s ease;
+        }
+
+        /* --- Custom Mouse Cursor --- */
+        .cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(107, 114, 128, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: width 0.3s ease, height 0.3s ease, background-color 0.3s ease, transform 0.1s ease;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+
+        .cursor.active {
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        @media (pointer: coarse) {
+            .cursor {
+                display: none;
+            }
+        }
+
+        /* --- Particle Canvas Background --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- General Section Styling --- */
+        .tech-section {
+            padding: 4rem 1rem;
+            text-align: center;
+        }
+
+        .gallery-section {
+            padding: 2rem 1rem 6rem 1rem;
+            text-align: center;
+        }
+
+        .tech-box, .gallery-box {
+            background-color: var(--card-bg-color);
+            border-radius: 1.5rem;
+            padding: 2.5rem 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+
+        /* Technology Stack Items */
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            padding: 0.5rem;
+        }
+
+        .tech-item:hover {
+            transform: translateY(-5px) scale(1.05);
+            opacity: 0.9;
+        }
+
+        /* Gallery Project Card Styling */
+        .gallery-item {
+            background-color: var(--background-color);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            height: auto;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Thumbnail Image Style */
+        .project-thumbnail {
+            width: 100%;
+            height: 200px; /* Fixed height for thumbnails */
+            object-fit: cover; /* Cover the area, cropping if necessary */
+            border-bottom: 1px solid var(--border-color);
+            display: block;
+        }
+
+        /* Fallback for broken thumbnails */
+        .project-thumbnail.broken {
+            background-color: var(--card-hover-bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-text-color);
+            font-size: 0.8rem;
+            font-family: var(--secondary-font);
+            text-align: center;
+            padding: 1rem;
+            line-height: 1.2;
+        }
+        .project-thumbnail.broken::before {
+            content: "Simulation Thumbnail Failed to Load";
+        }
+
+        .project-info {
+            padding: 1rem;
+            text-align: left;
+            border-top: 1px solid transparent; /* Keeps design clean */
+        }
+
+        /* Hover style for the 'Visit Site' button */
+        .visit-button:hover {
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            background-color: var(--button-hover-bg-color) !important;
+            color: var(--accent-color) !important;
+        }
+        /* End Gallery Styles */
+
+        /* Icon Styling */
+        .tech-icon-container {
+            width: 72px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: var(--background-color);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+
+        .tech-icon-img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+            transition: filter 0.3s, opacity 0.3s;
+        }
+
+        .tech-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-color);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Theme Toggle Button Style */
+        #theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 44px;
+            height: 44px;
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        #theme-toggle:hover {
+            background-color: var(--card-hover-bg-color);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        @media (max-width: 768px) {
+            .tech-section { padding: 2rem 0; }
+            .tech-box, .gallery-box { padding: 1.5rem 0.5rem; }
+            #theme-toggle { top: 0.75rem; right: 0.75rem; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 md:p-8">
+    <!-- Particle Canvas Background - Fixed position, behind content (z-index: -1) -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+
+    <div class="max-w-7xl mx-auto relative">
+        <!-- Theme Toggle Button (Interactive Element for Cursor) -->
+        <button id="theme-toggle" class="interactive-element" title="Toggle Theme: Light or Dark">
+            <!-- Icon is dynamically set by JS based on current theme -->
+            <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Initial state: Sun icon for Light Theme -->
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+
+        <!-- Header -->
+        <header class="text-center mb-8 md:mb-12 pt-8">
+            <h1 class="text-4xl font-extrabold mb-2">Scientific Modelling & HPC Stack</h1>
+            <p class="text-xl text-gray-500" style="color: var(--secondary-text-color); font-family: var(--secondary-font);">Specialized tools for high-fidelity simulations and computational research.</p>
+        </header>
+
+        <!-- Core Technologies Section -->
+        <section id="tech" class="tech-section">
+            <div class="tech-box">
+                <!-- Responsive Grid (16 Logos) -->
+                <div id="tech-grid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-6 sm:gap-8">
+                    <!-- Technology cards will be generated here -->
+                </div>
+            </div>
+        </section>
+
+        
+        <!-- Simulation Projects Section -->
+        <section id="website-gallery" class="gallery-section">
+            <h2 class="text-3xl font-extrabold mb-6">Simulation & Computational Projects</h2>
+            <p class="text-lg mb-8" style="color: var(--secondary-text-color); font-family: var(--secondary-font);">10 showcases of advanced numerical methods and high-performance computing implementations.</p>
+
+            <div class="gallery-box">
+                <!-- Responsive Grid for Gallery (10 Boxes) -->
+                <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Simulation project cards will be generated here -->
+                </div>
+            </div>
+        </section>
+    </div>
+    <!-- JavaScript for the custom cursor, theme logic, logo generation, gallery generation, and particle system -->
+    <script>
+        // --- Technology Data (16 Scientific Logos) ---
+        const technologies = [
+            // Core HPC & Languages
+            { name: "CUDA C++", imageURL: 'cudacp.png', category: 'HPC' },
+            { name: "C++", imageURL: 'c++.png' , category: 'Language'},
+            { name: "Julia", imageURL: 'julia.png' , category: 'Language'},
+            { name: "Python", imageURL: 'python.png' , category: 'Language'},
+
+            // Deep Learning & ML
+            { name: "PyTorch", imageURL: 'pyTorch.png', category: 'Deep Learning' },
+            { name: "Deep Learning", imageURL: 'cafe.png', category: 'Deep Learning' },
+            { name: "TensorFlow", imageURL: 'tensorflow.png', category: 'Deep Learning' },
+            { name: "Scikit-Learn", imageURL: 'sk-learn.png', category: 'Machine Learning' },
+
+            // Numerical & Simulation Tools
+            { name: "CFD (OpenFOAM)", imageURL: 'openfoam.png', category: 'Simulation' },
+            { name: "Spectral Modeling", imageURL: 'spectral.png', category: 'Numerical' },
+            { name: "NumPy/SciPy", imageURL: 'nu.png', category: 'Numerical' },
+            { name: "MATLAB", imageURL: 'matlab.gif', category: 'Engineering' },
+
+            // Infrastructure & Data
+            { name: "MPI", imageURL: 'mpi.jpg', category: 'Parallel' },
+            { name: "Docker", imageURL: 'docker.png', category: 'Infra' },
+            { name: "Jupyter", imageURL: 'juypter.jpg', category: 'Environment' },
+            { name: "Git", imageURL: 'git.png', category: 'Version Control' },
+        ];
+
+        // --- Simulation Project Data (10 Boxes) ---
+        const websiteProjects = [
+            {
+                name: "High-Fidelity Flow Simulation",
+                url: "link1.html", // Placeholder URL
+                description: "Simulation of a Taylor-Couette flow showing the formation of toroidal vortices between two rotating cylinders, visualizing rotational instability patterns",
+                thumbnailURL: "RayleighBenard3D.gif"
+            },
+            {
+                name: "Rayleigh-Taylor Instability (2D)",
+                url: "link2.html",
+                description: "2D simulation of the Rayleigh-Taylor instability, illustrating the mixing of two fluids with different densities under gravity",
+                thumbnailURL: "RayleighTaylor2D.gif"
+            },
+            {
+                name: "3D Rayleigh-Bénard Convection",
+                url: "link3.html",
+                description: "3D Rayleigh-Bénard convection simulation showing thermal plumes and convection cells in a heated fluid layer..",
+                thumbnailURL: "taylorvortex.png"
+            },
+            {
+                name: "Quantum Fluctuations Visualization",
+                url: "link5.html",
+                description: "Visualization of quantum vacuum fluctuations, capturing the ephemeral creation and annihilation of particle-antiparticle pairs.",
+                thumbnailURL: "Quantum_Fluctuations.gif"
+            },
+            {
+                name: "Decaying Turbulence Simulation",
+                url: "link6.html",
+                description: "2D simulation of decaying turbulence, showing the gradual energy cascade and dissipation in a viscous fluid.",
+                thumbnailURL: "DecayingTurbulence2D.gif"
+            },
+            {
+                name: "PINNs for PDE Solutions",
+                url: "link7.html",
+                description: "Physics-Informed Neural Networks (PINNs) predicting complex PDE solutions, illustrating model-driven computational learning.",
+                thumbnailURL: "pinns.gif"
+            },
+            {
+                name: "Xlinado Circuit Simulation",
+                url: "link8.html",
+                description: "High-fidelity Xlinado circuit simulation showing transient voltage and current dynamics across a complex electronic network.",
+                thumbnailURL: "circuit.gif"
+            },
+            {
+                name: "3rd Dam break simulation (HPC)",
+                url: "link9.html",
+                description: "3D dam-break simulation capturing free-surface fluid dynamics and shockwave propagation after barrier failure",
+                thumbnailURL: "dambreak3d.gif"
+            },
+          {
+    name: "Quantum Wave Transport ",
+    url: "link10.html",
+    description: "Simulation of quantum wave transport, visualizing probability density propagation and interference patterns in a potential landscape",
+    thumbnailURL: "wave.jpg"
+},
+
+
+            {
+                name: "flappy-R AI Agent",
+                url: "link11.html",
+                description: "AI-controlled Flappy Bird trained via a neural network, demonstrating real-time reinforcement learning and decision-making under stochastic environmental dynamics..",
+                thumbnailURL: "flappy.gif"
+            },
+            
+        ];
+
+        // --- Theme and Cursor Logic ---
+        const THEMES = ['light', 'dark']; // Only light and dark modes remaining
+        const body = document.body;
+        const toggleButton = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+
+        // Particle system variables
+        let canvas, ctx, particles = [];
+        let numParticles = 75;
+
+        // Function to determine particle color based on theme
+        function getParticleColor(theme) {
+            if (theme === 'light') return 'rgba(40, 40, 40, 0.4)'; // Dark grey on light background
+            return 'rgba(255, 255, 255, 0.25)'; // Light grey/white on dark background
+        }
+
+        // Function to set the visual theme
+        function applyTheme(theme) {
+            body.className = 'p-4 md:p-8'; // Reset classes, keep padding
+            if (theme === 'dark') { // Only add class if dark
+                body.classList.add(`dark-theme`);
+            }
+            localStorage.setItem('theme', theme);
+            currentTheme = theme;
+            updateThemeIcon(theme);
+
+            // Instantly update particle color on theme change
+            if (particles.length > 0) {
+                const newColor = getParticleColor(theme);
+                particles.forEach(p => {
+                    p.color = newColor;
+                    p.initialColor = newColor; // Update reference color
+                });
+            }
+        }
+
+        // Function to cycle through themes
+        function toggleTheme() {
+            const currentIndex = THEMES.indexOf(currentTheme);
+            const nextIndex = (currentIndex + 1) % THEMES.length;
+            const nextTheme = THEMES[nextIndex];
+            applyTheme(nextTheme);
+        }
+
+        // Function to update the icon based on the current theme
+        function updateThemeIcon(theme) {
+            themeIcon.innerHTML = ''; // Clear existing icon
+            let svgContent = '';
+
+            if (theme === 'dark') {
+                // Moon icon for dark theme
+                svgContent = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>';
+                themeIcon.title = "Toggle Theme: Dark Mode Active";
+            } else {
+                // Sun icon for light theme
+                svgContent = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+                themeIcon.title = "Toggle Theme: Light Mode Active";
+            }
+            themeIcon.innerHTML = svgContent;
+        }
+
+        // --- Particle Class and Functions (The Smooth 3rd Party Effect) ---
+        class Particle {
+            constructor(color) {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.radius = Math.random() * 2 + 1; // Small particles
+                this.color = color;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 0.5, // Slow movement
+                    y: (Math.random() - 0.5) * 0.5
+                };
+                this.initialColor = color;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+
+            update() {
+                // Move particle
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                // Wrap around edges to ensure continuous flow
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    // Re-initialize off-screen
+                    this.x = Math.random() < 0.5 ? -10 : canvas.width + 10;
+                    this.y = Math.random() * canvas.height;
+                }
+
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            canvas = document.getElementById('particle-canvas');
+            if (!canvas) return;
+            ctx = canvas.getContext('2d');
+
+            handleResize(); // Set initial canvas size
+
+            particles = [];
+            const color = getParticleColor(currentTheme);
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle(color));
+            }
+            animateParticles();
+        }
+
+        function animateParticles() {
+            if (!ctx) return;
+
+            // Clear the canvas with low opacity to create a subtle trail effect (smoothness)
+            const bgColor = getComputedStyle(document.body).getPropertyValue('background-color');
+            ctx.fillStyle = bgColor;
+            ctx.globalAlpha = 0.04;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+
+            const color = getParticleColor(currentTheme);
+            particles.forEach(particle => {
+                // Update particle color if theme changed
+                if (particle.initialColor !== color) {
+                    particle.color = color;
+                    particle.initialColor = color;
+                }
+                particle.update();
+            });
+
+            requestAnimationFrame(animateParticles);
+        }
+
+        // Handle window resize to keep canvas fullscreen
+        function handleResize() {
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        }
+        window.addEventListener('resize', handleResize);
+
+        // --- UI Element Creation Functions (Same as before) ---
+
+        // Function to create a Technology Stack card
+        function createLogoCard(tech) {
+            const card = document.createElement('div');
+            card.className = 'tech-item interactive-element';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.className = 'tech-icon-container';
+
+            const img = document.createElement('img');
+            img.className = 'tech-icon-img';
+            img.src = tech.imageURL;
+            img.alt = `${tech.name} Logo`;
+
+            // Essential fallback for broken images
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = 'https://placehold.co/100x100/6b7280/ffffff?text=LOGO'; // Fallback
+            };
+
+            iconContainer.appendChild(img);
+
+            const name = document.createElement('p');
+            name.className = 'tech-name';
+            name.textContent = tech.name;
+
+            card.appendChild(iconContainer);
+            card.appendChild(name);
+            return card;
+        }
+
+        // Function to create a Simulation Project card with a thumbnail
+        function createGalleryCard(project) {
+            const card = document.createElement('div');
+            card.className = 'gallery-item interactive-element';
+
+            // ADDED: Title attribute for the browser's native pop-up/tooltip on hover
+            card.title = `${project.name}: ${project.description} (Click to view details)`;
+
+            // 1. Thumbnail Image Area
+            const thumbnailImg = document.createElement('img');
+            thumbnailImg.className = 'project-thumbnail rounded-t-xl';
+            thumbnailImg.src = project.thumbnailURL;
+            thumbnailImg.alt = `Thumbnail for ${project.name}`;
+            thumbnailImg.loading = 'lazy'; // For performance
+
+            // Fallback for broken thumbnail images
+            thumbnailImg.onerror = function() {
+                this.onerror = null; // Prevent infinite loop
+                this.src = ''; // Clear broken image src
+                this.classList.add('broken'); // Add class for styling the fallback text
+            };
+
+            // 2. Project Info and Link
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'project-info';
+
+            const nameLink = document.createElement('a');
+            nameLink.href = project.url;
+            nameLink.target = '_blank';
+            nameLink.className = 'text-xl font-bold tracking-wider hover:underline block mb-2'
+            nameLink.style.fontFamily = 'var(--primary-font)'; /* Uses Orbitron */
+            nameLink.style.color = 'var(--accent-color)';
+            nameLink.textContent = project.name;
+            nameLink.setAttribute('role', 'link');
+
+            const descP = document.createElement('p');
+            descP.className = 'text-sm mb-4';
+            descP.style.color = 'var(--secondary-text-color)';
+            descP.style.fontFamily = 'var(--secondary-font)'; /* Uses Lato */
+            descP.textContent = project.description;
+
+            const visitButton = document.createElement('a');
+            visitButton.href = project.url;
+            visitButton.target = '_blank';
+            // ADDED: visit-button class for custom hover styles
+            visitButton.className = 'visit-button inline-block px-4 py-2 text-xs font-semibold uppercase rounded-full transition-all duration-200'
+            visitButton.style.backgroundColor = 'var(--accent-color)';
+            visitButton.style.color = 'var(--hover-color)';
+            visitButton.textContent = 'View Report \u2192';
+            visitButton.setAttribute('role', 'button');
+
+            infoDiv.appendChild(nameLink);
+            infoDiv.appendChild(descP);
+            infoDiv.appendChild(visitButton);
+
+            card.appendChild(thumbnailImg); // Add thumbnail first
+            card.appendChild(infoDiv);
+
+            return card;
+        }
+
+        // Initialize and setup handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const cursor = document.querySelector('.cursor');
+            const techGridContainer = document.getElementById('tech-grid');
+            const galleryGridContainer = document.getElementById('gallery-grid');
+
+            // 1. Initialize Theme
+            applyTheme(currentTheme);
+            toggleButton.addEventListener('click', toggleTheme);
+
+            // 2. Particle System Setup
+            initParticles();
+
+            // 3. Logo Generation (Tech Stack - 16 Logos)
+            // Note: The loop count ensures exactly 16 logos are displayed if the array has more.
+            technologies.slice(0, 16).forEach(tech => {
+                techGridContainer.appendChild(createLogoCard(tech));
+            });
+
+            // 4. Gallery Generation (Simulation Projects - 10 Boxes)
+            // Note: The loop count ensures exactly 10 projects are displayed.
+            websiteProjects.slice(0, 10).forEach(project => {
+                galleryGridContainer.appendChild(createGalleryCard(project));
+            });
+
+            // 5. Custom Cursor Logic
+            document.addEventListener('mousemove', e => {
+                cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+            });
+
+            document.addEventListener('mouseover', e => {
+                const isInteractive = e.target.closest('.interactive-element');
+                if (isInteractive) {
+                    cursor.classList.add('active');
+                } else {
+                    cursor.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

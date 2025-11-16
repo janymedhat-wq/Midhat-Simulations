@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPC CFD Engine - Rayleigh-Taylor Instability</title>
+
+    <!-- Importing a new, modern font: Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* General body styles for a light, minimalist theme */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Dark theme styles */
+        body.dark-theme {
+            background-color: #111;
+            color: #f0f0f0;
+        }
+
+        body.dark-theme .tutorial-content { border-top: 1px solid #444; }
+        body.dark-theme pre { background-color: #222; }
+        body.dark-theme .theme-toggle-button { color: #f0f0f0; border-color: #f0f0f0; }
+        body.dark-theme .theme-toggle-button:hover { background-color: #f0f0f0; color: #111; }
+        body.dark-theme .equation-block { border-left: 3px solid #7cb3ff; background-color: #222; }
+        body.dark-theme figcaption { color: #ccc; }
+
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(3rem, 10vw, 7rem);
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #111; /* Changed to match theme */
+        }
+
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(50px, 10vw, 100px);
+            padding-top: clamp(25px, 5vw, 50px);
+            border-top: 1px solid #c0c0c0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(20px, 5vw, 40px);
+        }
+
+        .tutorial-content p { line-height: 1.6; max-width: 800px; }
+        .tutorial-content h2, .tutorial-content h3, .tutorial-content h4 { font-weight: 700; text-transform: uppercase; }
+        .tutorial-content h2 { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: 2px; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 2rem; margin-bottom: 1rem; }
+
+        pre { background-color: #e5e7eb; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; width: 100%; box-sizing: border-box; }
+        pre code { font-size: 0.9rem; }
+
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 10px;
+            margin: 1.5rem 0;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+
+        /* Image/Visualization Styling (Placeholder for RT Simulation) */
+        .viz-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto; /* Centering the visualization */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 0;
+        }
+
+        body.dark-theme .viz-container { border-color: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+
+
+        .viz-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            min-height: 200px; /* Ensure placeholder visibility */
+        }
+
+        .viz-container figcaption {
+            padding: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+            background-color: #f8f8f8;
+        }
+
+        body.dark-theme .viz-container figcaption {
+            background-color: #282828;
+        }
+
+
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #c0c0c0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+        .dark-theme .theme-toggle-button { border: 1px solid #f0f0f0; color: #f0f0f0; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 30px; text-align: center; align-items: center; }
+            footer { flex-direction: column; justify-content: center; align-items: center; gap: 10px; }
+            .main-content h1 { letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main content area -->
+        <div class="main-content">
+            <h1>CFD HPC STACK</h1>
+        </div>
+
+        <!-- Tutorial Section (Core Technical Content) -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Rayleigh-Taylor Instability (2D): Boussinesq Mixing Layer</h2>
+            <p class="text-sm text-gray-500">A guide to developing a high-performance solver for buoyancy-driven fluid mixing, utilizing C++, CUDA, and high-level scripting (Julia).</p>
+
+            <div class="content-section">
+                <p>
+                    The Rayleigh-Taylor (RT) instability describes the interpenetration of two fluids with different densities when the denser fluid is supported by the lighter fluid in a gravitational field. This leads to the formation of 'fingers' of the heavy fluid plunging into the light fluid, and 'bubbles' of the light fluid rising, illustrating the mixing of two fluids. Solving this typically relies on the **Boussinesq approximation** to model the density variations.
+                </p>
+
+                <!-- Visualization Placeholder for RT Simulation -->
+                <div class="viz-container">
+                    <img src="RayleighTaylor2D.gif"
+                         alt="Animated simulation showing the evolution of Rayleigh-Taylor plumes and bubbles."
+                         onerror="this.onerror=null; this.src='https://placehold.co/800x400/9b59b6/white?text=Visualization+Not+Available+Use+Image+Tag';"/>
+                    <figcaption>Conceptual visualization of the Rayleigh-Taylor instability showing the characteristic downward plumes and upward bubbles.</figcaption>
+                </div>
+                <!-- End Visualization -->
+
+                <h3>1. Governing Equations and Boussinesq Approximation</h3>
+                <p>
+                    The RT flow is governed by the time-dependent, incompressible Navier-Stokes equations, augmented by a temperature (or density) transport equation and the Boussinesq approximation which couples the two.
+                </p>
+
+                <h4 id="navier-stokes">Incompressible Navier-Stokes Equations (Momentum with Buoyancy)</h4>
+                <div class="equation-block">
+                    $$
+                    \frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla) \mathbf{u} = -\frac{1}{\rho_0} \nabla p + \nu \nabla^2 \mathbf{u} + \mathbf{g} \frac{\rho}{\rho_0} \quad \text{(Momentum)}
+                    $$
+                    $$
+                    \nabla \cdot \mathbf{u} = 0 \quad \text{(Continuity)}
+                    $$
+                </div>
+
+                <h4 id="boussinesq">The Boussinesq Approximation and Energy Transport</h4>
+                <p>
+                    The Boussinesq approximation relates the small density variations ($\rho$) to temperature ($T$), allowing us to treat $\rho$ as constant everywhere except in the gravitational term $\mathbf{g}\rho$:
+                </p>
+                <div class="equation-block">
+                    $$
+                    \rho = \rho_0 [1 - \alpha(T - T_0)]
+                    $$
+                    $$
+                    \frac{\partial T}{\partial t} + \mathbf{u} \cdot \nabla T = \kappa \nabla^2 T \quad \text{(Energy Transport)}
+                    $$
+                </div>
+
+                <h3>2. Core Solver Implementation in C++ (RT Data Structures)</h3>
+                <p>
+                    The core C++ solver manages velocity and pressure fields, plus the scalar temperature field which drives the buoyancy. The domain is typically a simple 2D Cartesian grid.
+                </p>
+                <pre class="code-snippet"><code class="language-cpp">// cfd_core.cpp: C++ Data Structures for RT
+#include <vector>
+#include <iostream>
+
+// Simulation constants
+const int NX = 100; // X-cells
+const int NY = 200; // Y-cells (Vertical dimension)
+const double GRAVITY = 9.81; // Acceleration due to gravity (m/s^2)
+const double ALPHA = 0.01; // Thermal expansion coefficient (from Boussinesq)
+const double RHO_REF = 1.0; // Reference density
+
+class CFD_Grid {
+private:
+    std::vector<double> u_field;   // X-velocity (U)
+    std::vector<double> v_field;   // Y-velocity (V)
+    std::vector<double> p_field;   // Pressure (P)
+    std::vector<double> t_field;   // Temperature (T) - Proxy for density
+
+public:
+    CFD_Grid() : u_field(NX * NY), v_field(NX * NY), p_field(NX * NY), t_field(NX * NY) {
+        std::cout << "CFD Grid initialized for RT instability with " << NX * NY << " points.\n";
+        // Initialize T_field to set up the density inversion (e.g., cold below, hot above)
+    }
+
+    // Utility function to get 1D index from 2D coordinates
+    int index(int x, int y) const {
+        if (x < 0 || x >= NX || y < 0 || y >= NY) {
+            // Note: Boundary conditions handled separately in full code
+            return -1;
+        }
+        return x * NY + y;
+    }
+
+    // Initial condition setter: heavier fluid (T=1) on top, lighter (T=0) on bottom
+    void set_initial_condition(double interface_y) {
+        for (int x = 0; x < NX; ++x) {
+            for (int y = 0; y < NY; ++y) {
+                // Initialize T field with small perturbation at the interface
+                double T_val = (y < interface_y) ? 0.0 : 1.0;
+                t_field[index(x, y)] = T_val;
+            }
+        }
+    }
+
+    // Accessors for field data
+    double* get_t_data() { return t_field.data(); }
+    double* get_v_data() { return v_field.data(); }
+    size_t get_size() const { return NX * NY; }
+};
+// End of C++ Core.</code></pre>
+
+                <h3>3. High-Level Scripting with Julia</h3>
+                <p>
+                    The Julia language, with packages like `IncompressibleNavierStokes`, provides a highly readable and efficient way to define the simulation environment, domain, initial conditions, and solver parameters. This serves as the primary control script.
+                </p>
+                <pre class="code-snippet"><code class="language-julia">// Rayleigh-Taylor instability in 2D - Julia Script
+# Two fluids with different temperatures start mixing.
+
+using GLMakie
+using IncompressibleNavierStokes
+
+# Output directory for saving results
+outdir = joinpath(@__dir__, "output", "RayleighTaylor2D")
+
+# Hardware
+backend = IncompressibleNavierStokes.CPU()
+
+# Precision
+T = Float64
+
+# Grid
+n = 50
+x = tanh_grid(T(0), T(1), n, T(1.5)), tanh_grid(T(0), T(2), 2n, T(1.5))
+# plotgrid(x...; figure = (; size = (300, 600)))
+
+# Setup
+temperature = temperature_equation(;
+    Pr = T(0.71),
+    Ra = T(1e6),
+    Ge = T(1.0),
+    dodissipation = true,
+    boundary_conditions = ((SymmetricBC(), SymmetricBC()), (SymmetricBC(), SymmetricBC())),
+    gdir = 2,
+    nondim_type = 1,
+)
+setup = Setup(;
+    x,
+    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+    Re = 1 / temperature.α1,
+    temperature,
+);
+
+# Initial conditions
+ustart = velocityfield(setup, (dim, x, y) -> zero(x));
+tempstart = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
+
+# Solve equation
+state, outputs = solve_unsteady(;
+    setup,
+    ustart,
+    tempstart,
+    tlims = (T(0), T(10)),
+    Δt = T(5e-3),
+    processors = (;
+        rtp = realtimeplotter(;
+            setup,
+            nupdate = 20,
+            fieldname = :temperature,
+            size = (400, 600),
+        ),
+        log = timelogger(; nupdate = 200),
+    ),
+);
+
+// End of Julia Script.</code></pre>
+
+                <h3>4. C++ Implementation Detail (Buoyancy Source Term)</h3>
+                <p>
+                    The critical step in the RT simulation is calculating the gravitational force term in the momentum equation. In the Boussinesq model, this force is non-zero only in the direction of gravity (typically the y or z axis) and is proportional to the local temperature deviation.
+                </p>
+                <pre class="code-snippet"><code class="language-cpp">// cfd_solver_kernel.cpp: Conceptual C++ Function for Source Term
+void calculate_buoyancy_source(
+    const double* t_field, // Temperature field
+    double* f_source_y,    // Buoyancy source term (y-momentum)
+    const int N_TOTAL,
+    const double T_REF)
+{
+    // This loop is highly parallelizable and typically runs on the GPU via CUDA
+    for (int idx = 0; idx < N_TOTAL; ++idx) {
+        
+        // Step 1: Calculate the density deviation using Boussinesq
+        // Density is inversely related to Temperature in this setup
+        // RHO_DEVIATION is proportional to (T_REF - T_current)
+        double T_current = t_field[idx];
+        double T_deviation = T_REF - T_current; // Deviation from the reference temperature
+
+        // Step 2: Calculate the buoyant force f_source (g * rho_deviation)
+        // Buoyancy force is added to the momentum equation (only in the Y-direction, assuming g is -Y)
+        // F_buoyancy = -g * rho_0 * alpha * (T - T_ref)
+        // For simplicity: F_buoyancy is proportional to g * T_deviation
+        
+        // Note: The non-dimensional form simplifies this, but physically, 
+        // the source term is proportional to the local density difference and gravity.
+        f_source_y[idx] = GRAVITY * RHO_REF * ALPHA * T_deviation; 
+    }
+}
+// End of C++ Source Term.</code></pre>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- The Footer remains outside the container to span full width -->
+    <footer>
+        <p>© 2025 HPC-CFD Technical Document.</p>
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="theme-toggle-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <span id="theme-text">Dark Mode</span>
+        </button>
+    </footer>
+
+    <!-- JavaScript for Theme Toggle Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            const toggleButton = document.getElementById('theme-toggle');
+
+            // --- Theme Toggle Logic ---
+            const isDarkMode = localStorage.getItem('theme') === 'dark';
+
+            const updateThemeUI = (isDark) => {
+                if (isDark) {
+                    body.classList.add('dark-theme');
+                    toggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span>Light Mode</span>`;
+                } else {
+                    body.classList.remove('dark-theme');
+                    toggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span>Dark Mode</span>`;
+                }
+            };
+
+            updateThemeUI(isDarkMode);
+
+            toggleButton.addEventListener('click', () => {
+                const isDark = body.classList.toggle('dark-theme');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI(isDark);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decaying 2D Turbulence: Vortex Dynamics and HPC</title>
+
+    <!-- Importing Space Mono font for a scientific aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* Light theme default */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* --- Dark Theme Overrides --- */
+        body.dark-theme {
+            background-color: #1a1a2e; /* Deep blue/purple */
+            color: #e0f7fa; /* Light cyan */
+        }
+
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(3rem, 10vw, 7rem);
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #333;
+        }
+        body.dark-theme .main-content h1 {
+            color: #79a6fe;
+            text-shadow: 0 0 5px rgba(121, 166, 254, 0.5);
+        }
+
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(50px, 10vw, 100px);
+            padding-top: clamp(25px, 5vw, 50px);
+            border-top: 1px solid #ccc;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(20px, 5vw, 40px);
+        }
+        body.dark-theme .tutorial-content {
+            border-top: 1px solid #334e68;
+        }
+
+        .tutorial-content p { line-height: 1.6; max-width: 800px; }
+        .tutorial-content h2, .tutorial-content h3, .tutorial-content h4 { font-weight: 700; text-transform: uppercase; color: #333; }
+        body.dark-theme .tutorial-content h2, body.dark-theme .tutorial-content h3, body.dark-theme .tutorial-content h4 { color: #b3ccff; }
+        .tutorial-content h2 { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: 2px; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 2rem; margin-bottom: 1rem; }
+
+        pre { 
+            background-color: #e5e7eb; 
+            padding: 1.5rem; 
+            border-radius: 0.5rem; 
+            overflow-x: auto; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid #ddd; 
+        }
+        /* Black background for code in dark mode */
+        body.dark-theme pre {
+            background-color: #000000; 
+            border: 1px solid #334e68;
+        }
+        pre code { font-size: 0.9rem; color: #008080; }
+        body.dark-theme pre code { color: #a9f0a9; }
+
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 20px;
+            margin: 1.5rem 0;
+            border-left: 5px solid #007bff;
+            background-color: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        body.dark-theme .equation-block {
+            border-left: 5px solid #ff5757; 
+            background-color: #252a42;
+            box-shadow: 0 0 10px rgba(255, 87, 87, 0.2);
+        }
+
+        /* Visualization Area */
+        .viz-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin: 20px auto;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+            background-color: #ffffff;
+            position: relative;
+        }
+        body.dark-theme .viz-container {
+            border: 2px solid #79a6fe;
+            box-shadow: 0 0 20px rgba(121, 166, 254, 0.5);
+            background-color: #0f0f1a;
+        }
+
+        .viz-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .viz-container figcaption {
+            padding: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+            background-color: rgba(220, 220, 220, 0.8);
+            color: #333;
+        }
+        body.dark-theme .viz-container figcaption {
+            background-color: rgba(0, 0, 0, 0.3);
+            color: #b3ccff;
+        }
+
+
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #ccc;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        body.dark-theme footer {
+            border-top: 1px solid #334e68;
+            color: #b3ccff;
+        }
+
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+
+        body.dark-theme .theme-toggle-button {
+            border: 1px solid #f0f0f0;
+            color: #f0f0f0;
+        }
+        body.dark-theme .theme-toggle-button:hover {
+            background-color: #f0f0f0;
+            color: #111;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 20px; text-align: center; align-items: center; }
+            .main-content h1 { letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main content area -->
+        <div class="main-content">
+            <h1>2D TURBULENCE HPC</h1>
+        </div>
+
+        <!-- Tutorial Section (Core Technical Content) -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Decaying 2D Isotropic Turbulence Simulation</h2>
+            <p>
+                Two-dimensional turbulence differs fundamentally from 3D turbulence. While 3D flow features an energy cascade to smaller scales (Kolmogorov cascade), 2D flow exhibits a dual cascade: energy cascades to larger scales (inverse cascade), and enstrophy (mean square vorticity) cascades to smaller scales. This simulation focuses on the viscous decay phase.
+            </p>
+
+            <!-- Visualization Placeholder -->
+            <div class="viz-container">
+                <img id="animation-display" 
+                     src="DecayingTurbulence2D.gif" 
+                     alt="Placeholder for 2D decaying turbulence animation showing vortex merging and dissipation."
+                     onerror="this.onerror=null; this.src='https://placehold.co/800x400/3c096f/ffffff?text=Vorticity+Field+Visualization';"/>
+
+                <figcaption>Simulated vorticity field showing the inverse energy cascade: small vortices merge into larger, more stable structures over time.</figcaption>
+            </div>
+            <!-- End Visualization -->
+
+            <h3 id="governing-equations">1. Derivation of the $\omega-\psi$ Formulation (2D)</h3>
+            <p>
+                For 2D incompressible flow ($\nabla \cdot \mathbf{u} = 0$), the dynamics are simplified using the streamfunction ($\psi$) and vorticity ($\omega$) formulation, which eliminates pressure from the equation set.
+            </p>
+
+            <h4 id="vorticity-definition">Vorticity and Streamfunction</h4>
+            <p>
+                In 2D, vorticity $\omega$ is the out-of-plane component of the curl of the velocity $\mathbf{u}=(u, v)$: $\omega = (\nabla \times \mathbf{u}) \cdot \mathbf{\hat{k}}$. The incompressibility condition allows us to define velocity in terms of the streamfunction $\psi$.
+            </p>
+            <div class="equation-block">
+                $$
+                \omega = \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y}
+                $$
+                $$
+                u = \frac{\partial \psi}{\partial y}, \quad v = -\frac{\partial \psi}{\partial x}
+                $$
+            </div>
+
+            <h4 id="poisson-equation">Streamfunction-Vorticity Relation (Poisson Equation)</h4>
+            <p>
+                Substituting the velocity components defined by $\psi$ into the vorticity definition yields the Poisson equation relating the two fields. This is the elliptic equation that must be solved at every time step.
+            </p>
+            <div class="equation-block">
+                $$
+                \frac{\partial^2 \psi}{\partial x^2} + \frac{\partial^2 \psi}{\partial y^2} = \nabla^2 \psi = -\omega
+                $$
+            </div>
+
+            <h4 id="vorticity-transport">Vorticity Transport Equation</h4>
+            <p>
+                Taking the curl of the 2D incompressible Navier-Stokes equation leads to the $\omega$-transport equation, which is a non-linear advection-diffusion equation. The term $J(\psi, \omega)$ is the Jacobian, representing non-linear vortex advection.
+            </p>
+            <div class="equation-block">
+                $$
+                \frac{\partial \omega}{\partial t} + \underbrace{\frac{\partial \psi}{\partial y} \frac{\partial \omega}{\partial x} - \frac{\partial \psi}{\partial x} \frac{\partial \omega}{\partial y}}_{J(\psi, \omega) \text{ (Advection)}} = \frac{1}{Re} \left( \frac{\partial^2 \omega}{\partial x^2} + \frac{\partial^2 \omega}{\partial y^2} \right)
+                $$
+                <p class="text-xs mt-3">Where $Re$ is the Reynolds number, controlling the rate of viscous dissipation.</p>
+            </div>
+
+            <h3 id="julia-setup">2. High-Level Julia Setup for Initial Conditions</h3>
+            <p>
+                A decaying turbulence simulation typically starts with an initial, randomly phased velocity field that satisfies $\nabla \cdot \mathbf{u}=0$. This Julia code snippet outlines the setup for a high-wavenumber initial vorticity distribution.
+            </p>
+            <pre class="code-snippet"><code class="language-julia">// julia_turbulence_setup.jl: Setup for 2D Decaying Turbulence
+using FourierFlows
+using Random
+
+// --- Simulation Parameters ---
+Lx, Ly = 2π, 2π     // Domain size
+nx, ny = 256, 256   // Grid resolution
+nu = 1e-4           // Viscosity (controls dissipation rate, i.e., 1/Re)
+nsteps = 1000       // Number of time steps
+dt = 5e-3           // Time step size
+
+// Create the 2D grid structure
+grid = TwoDGrid(nx, Lx, ny, Ly)
+
+// Build the 2D QG (Quasi-Geostrophic) problem structure
+// This model uses the omega-psi formulation inherently
+prob = TwoDNavierStokes.Problem(grid; nu=nu, dt=dt)
+s = prob.state // Holds psi, omega, and their Fourier transforms
+
+// --- Initial Vorticity Field (High Wavenumber Random Noise) ---
+@views @. s.sol = grid.kr * (grid.kr < 6) // Filter out low wavenumbers
+@. s.sol *= exp.(im * 2π * rand(grid.nkr, grid.nl)) // Random phase for isotropy
+
+// Initial Vorticity is the Inverse Laplacian of the streamfunction (sol)
+// In Fourier space: -k² * psi_hat = omega_hat
+TwoDNavierStokes.vorticity_from_streamfunction!(s.sol, s.ωh, grid)
+
+// Normalize the initial energy to 1.0 (typical convention)
+E0 = TwoDNavierStokes.energy(prob)
+@. s.sol /= sqrt(E0)
+
+// Set initial time step:
+TwoDNavierStokes.vorticity_from_streamfunction!(s.sol, s.ωh, grid)
+
+// Simulation loop (conceptual):
+// for i = 1:nsteps
+//     stepforward!(prob)
+//     // Output data and calculate diagnostics like energy/enstrophy decay
+// end
+// End of Julia Script.</code></pre>
+
+            <h3 id="hpc-parallelism">3. HPC Implementation: MPI Parallel Poisson Solver</h3>
+            <p>
+                The most computationally intensive part is solving the elliptic $\nabla^2 \psi = -\omega$ equation. In a distributed parallel environment, this is typically done using domain decomposition via Message Passing Interface (MPI). The solution often uses iterative methods like Jacobi, Gauss-Seidel, or Conjugate Gradient.
+            </p>
+            <p>
+                Note: This C/MPI code is conceptual and demonstrates the parallel logic for HPC. It cannot be executed directly in a browser environment.
+            </p>
+            <pre class="code-snippet"><code class="language-c">// c_mpi_poisson_solver.c: Conceptual MPI Parallel Jacobi Solver
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+#include <math.h>
+
+// --- Assembly/Low-Level Function: Jacobi Iteration ---
+// This function updates the streamfunction 'psi' using the current vorticity 'omega'
+// based on the finite difference discretization of: psi_new = 0.25 * (psi_neighbors - h^2 * omega)
+void jacobi_step(double *psi_new, const double *psi_old, const double *omega, 
+                 int rows, int cols, double h_sq, int *neighbors, double *sendbuf, double *recvbuf) {
+
+    // Neighbors index: [0]=North, [1]=South, [2]=East, [3]=West
+    // MPI communication for ghost layers must happen *before* this calculation
+    // ... (MPI_Sendrecv calls would be here, but are omitted for simplicity)
+
+    // Example Jacobi update for an interior point (i, j)
+    for (int i = 1; i < rows - 1; ++i) {
+        for (int j = 1; j < cols - 1; ++j) {
+            int idx = i * cols + j; // 1D array indexing for the 2D grid
+            
+            // 5-point stencil for the Laplacian
+            double neighbor_sum = psi_old[idx - cols] + psi_old[idx + cols] + 
+                                  psi_old[idx - 1] + psi_old[idx + 1];
+
+            // Update formula for the Poisson equation (including h^2 * omega)
+            psi_new[idx] = 0.25 * (neighbor_sum + h_sq * omega[idx]);
+        }
+    }
+}
+
+int main(int argc, char **argv) {
+    MPI_Init(&argc, &argv);
+
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    const int GLOBAL_N = 1024; // Global domain size (N x N)
+    const int LOCAL_ROWS = GLOBAL_N / size + 2; // Rows per process + 2 ghost layers
+    const int LOCAL_COLS = GLOBAL_N + 2;       // Columns (if 1D decomposition)
+
+    // ... (Memory allocation for psi_old, psi_new, omega, buffers) ...
+    // ... (Initialization of boundary conditions, h_sq) ...
+    // ... (Setup of neighbors (rank + 1, rank - 1) for 1D decomposition) ...
+
+    int max_iterations = 1000;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+
+        // --- 1. MPI Ghost Layer Exchange (Assembly/Communication) ---
+        // Exchange top/bottom rows with North/South neighbors using MPI_Sendrecv
+        // This is crucial for correctly calculating the boundary stencil points.
+        // MPI_Sendrecv(sendbuf_north, LOCAL_COLS, MPI_DOUBLE, neighbors[0], ..., MPI_COMM_WORLD, ...)
+
+        // --- 2. Local Calculation ---
+        // Perform the Jacobi iteration on the local interior domain
+        // jacobi_step(psi_new, psi_old, omega, LOCAL_ROWS, LOCAL_COLS, h_sq, ...);
+
+        // ... (Check for convergence, swap psi_old and psi_new) ...
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+// End of C/MPI Code.</code></pre>
+</main>
+</div>
+</body>
+</html>

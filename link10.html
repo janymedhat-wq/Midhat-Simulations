@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated Title: Clear and direct -->
+    <title>Quantum Wave Transport Simulation</title>
+    <!-- Importing Space Mono font for a scientific aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/tex-mml-chtml.js"></script>
+    <style>
+        /* Light theme default */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* --- Dark Theme Overrides --- */
+        body.dark-theme {
+            background-color: #1a1a2e; /* Deep blue/purple */
+            color: #e0f7fa; /* Light cyan */
+        }
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            /* Emphasizing the title */
+            font-size: clamp(2.5rem, 8vw, 6rem); 
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #333;
+        }
+        body.dark-theme .main-content h1 {
+            color: #4b89f5; /* Blue accent for Quantum */
+            text-shadow: 0 0 5px rgba(75, 137, 245, 0.5);
+        }
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(40px, 8vw, 80px);
+            padding-top: clamp(20px, 4vw, 40px);
+            border-top: 1px solid #ccc;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(15px, 4vw, 30px);
+        }
+        body.dark-theme .tutorial-content {
+            border-top: 1px solid #334e68;
+        }
+        .tutorial-content p { line-height: 1.6; max-width: 900px; }
+        .tutorial-content h2, .tutorial-content h3, .tutorial-content h4 { font-weight: 700; text-transform: uppercase; color: #333; }
+        body.dark-theme .tutorial-content h2, body.dark-theme .tutorial-content h3, body.dark-theme .tutorial-content h4 { color: #e0f7fa; }
+        .tutorial-content h2 { font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: 2px; margin-top: 2rem; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 1rem; margin-bottom: 0.5rem; }
+
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 20px;
+            margin: 1.5rem 0;
+            border-left: 5px solid #4b89f5;
+            background-color: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        body.dark-theme .equation-block {
+            border-left: 5px solid #79a6fe; /* Blue accent */
+            background-color: #252a42;
+            box-shadow: 0 0 10px rgba(121, 166, 254, 0.2);
+        }
+        
+        /* Visualization Area */
+        .viz-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin: 40px auto;
+            border: 2px solid #4b89f5; /* Quantum Blue Border */
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(75, 137, 245, 0.5);
+            background-color: #000000; /* Dark background for visualization */
+            position: relative;
+        }
+        body.dark-theme .viz-container {
+            border: 2px solid #79a6fe;
+            box-shadow: 0 0 20px rgba(121, 166, 254, 0.8);
+            background-color: #0f0f1a;
+        }
+
+        /* Video element styling to fill container */
+        .viz-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .viz-container figcaption {
+            padding: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+            background-color: rgba(220, 220, 220, 0.8);
+            color: #333;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        body.dark-theme .viz-container figcaption {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #b3ccff;
+        }
+        
+        /* --- Downloads Section --- */
+        .download-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #e3f2fd; /* Light blue background */
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        body.dark-theme .download-section {
+            background-color: #334e68; /* Darker blue background */
+        }
+        .download-section h3 {
+            margin-top: 0;
+            color: #0d47a1; /* Darker blue heading */
+        }
+        body.dark-theme .download-section h3 {
+            color: #bbdefb;
+        }
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #4b89f5;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 700;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: fit-content;
+        }
+        .download-link:hover {
+            background-color: #2b6cb0;
+            transform: translateY(-2px);
+        }
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #ccc;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        body.dark-theme footer {
+            border-top: 1px solid #334e68;
+            color: #b3ccff;
+        }
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+        body.dark-theme .theme-toggle-button {
+            border: 1px solid #f0f0f0;
+            color: #f0f0f0;
+        }
+        body.dark-theme .theme-toggle-button:hover {
+            background-color: #f0f0f0;
+            color: #111;
+        }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 20px; text-align: left; }
+            .main-content h1 { letter-spacing: 2px; font-size: 2.5rem; }
+            .viz-container { height: 300px; }
+            .download-section { flex-direction: column; }
+            .download-link { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main title area -->
+        <div class="main-content">
+            <!-- Updated H1 to be strongly titled -->
+            <h1>QUANTUM WAVE TRANSPORT SIMULATION</h1>
+            <p>Explore the dynamics of the wave function using the split-Step Fourier Method (SSFM). This simulation visualizes key quantum phenomena like tunneling and interference.</p>
+        </div>
+        
+        <!-- Downloads Section -->
+        <div class="download-section">
+            <h3>Downloadable Artifacts</h3>
+            <a href="Quantum Wave Transport Simulation.pdf" class="download-link" download="Quantum_Wave_Lab_Report.md">
+                <span>📄</span> Download Lab Report (Conceptual)
+            </a>
+            <a href="Quantum Wave Transport Simulation.pdf" class="download-link" download="Quantum_Transport_Deck.md">
+                <span>📊</span> Download Presentation Deck Outline
+            </a>
+        </div>
+
+        <!-- Visualization Area - Now uses an HTML5 video tag -->
+        <div class="viz-container">
+            <video id="simulation-video" controls loop autoplay muted 
+                   style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                   poster="https://placehold.co/800x400/1a1a2e/ffffff?text=SIMULATION+VISUAL:++Quantum+Wave+Transport">
+                <!-- IMPORTANT: Replace 'quantum_wave_transport.mp4' with the actual path or URL to your video file -->
+                <source src="quantum_tunneling_simulation.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <figcaption>Interactive Simulation: The probability density ($|\Psi|^2$) of a Gaussian wave packet propagating through a potential barrier.</figcaption>
+        </div>
+        <!-- End Visualization -->
+
+        <!-- Tutorial Content -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Theoretical Framework: The Time-Dependent Schrödinger Equation (TDSE)</h2>
+            <p>
+                The fundamental equation governing the **simulation** is the TDSE. Since the Kinetic ($\hat{T}$) and Potential ($\hat{V}$) operators do not commute, we rely on the high-performance numerical technique known as the **Split-Step Fourier Method (SSFM)**.
+            </p>
+
+            <h3 id="governing-equation">1. The TDSE and Hamiltonian Operator</h3>
+            <p>
+                The Hamiltonian operator ($\hat{H}$) represents the total energy, and its action on the wave function ($\Psi(\mathbf{r}, t)$) dictates the time evolution being modeled in the simulation.
+            </p>
+            <div class="equation-block">
+                $$
+                i\hbar \frac{\partial}{\partial t} \Psi(\mathbf{r}, t) = \hat{H} \Psi(\mathbf{r}, t)
+                $$
+                $$
+                \hat{H} = \hat{T} + \hat{V} = -\frac{\hbar^2}{2m} \nabla^2 + V(\mathbf{r}, t)
+                $$
+                <p class="text-xs mt-3">Where $\hbar$ is the reduced Planck constant, $m$ is the particle mass, $\nabla^2$ is the Laplacian, and $V$ is the potential energy.</p>
+            </div>
+
+            <h3 id="numerical-solution">2. The Split-Step Fourier Method (SSFM) for Simulation</h3>
+            <p>
+                The SSFM is the workhorse of this **simulation**. It cleverly splits the total time evolution $\hat{U}(\Delta t)$ into two commutative steps ($\hat{U}_V$ and $\hat{U}_T$), allowing the non-commuting operators to be handled sequentially for computational stability and speed. The formal solution for a small time step $\Delta t$ is approximated by:
+            </p>
+
+            <div class="equation-block">
+                $$
+                \Psi(t+\Delta t) \approx e^{-i \hat{V} \Delta t / \hbar} e^{-i \hat{T} \Delta t / \hbar} \Psi(t)
+                $$
+            </div>
+
+            <h4 id="kinetic-step">Step 1: Kinetic Energy Propagation (Momentum Space)</h4>
+            <p>
+                The kinetic operator ($\hat{T}$) is applied efficiently in **momentum space** ($\mathbf{p}$), where it is a simple multiplication. This requires a Fourier Transform ($\mathcal{F}$) integral, which is implemented using the Fast Fourier Transform (FFT).
+            </p>
+            <div class="equation-block">
+                $$
+                \tilde{\Psi}(\mathbf{p}, t) = \mathcal{F} \left\{ \Psi(\mathbf{r}, t) \right\} = \frac{1}{(2\pi \hbar)^{3/2}} \int_{\mathbb{R}^3} \Psi(\mathbf{r}, t) e^{-i \mathbf{p} \cdot \mathbf{r} / \hbar} \, d\mathbf{r}
+                $$
+                $$
+                \text{Evolution:} \quad \tilde{\Psi}_{\text{final}} = e^{-i \left( \frac{p^2}{2m} \right) \Delta t / \hbar} \tilde{\Psi}(\mathbf{p}, t)
+                $$
+            </div>
+
+            <h4 id="potential-step">Step 2: Potential Energy Propagation (Position Space)</h4>
+            <p>
+                The potential operator ($\hat{V}$) is applied in **position space** ($\mathbf{r}$) where it acts as a phase change multiplier on the wave function.
+            </p>
+            <div class="equation-block">
+                $$
+                \Psi_{\text{final}}(\mathbf{r}, t+\Delta t) = e^{-i V(\mathbf{r}, t) \Delta t / \hbar} \Psi_{\text{intermediate}}(\mathbf{r}, t)
+                $$
+            </div>
+
+            <h3 id="visualization">3. Probability Density and Interference</h3>
+            <p>
+                The observable quantity visualized by the **simulation** is the **probability density** $\rho(\mathbf{r}, t)$, which shows where the particle is likely to be found. The striking patterns seen are a direct result of the complex phases of the wave function interfering with itself.
+            </p>
+            <div class="equation-block">
+                $$
+                \rho(\mathbf{r}, t) = |\Psi(\mathbf{r}, t)|^2 = \Psi^* \Psi
+                $$
+            </div>
+            
+            <p>
+                The ability to simulate complex potential landscapes is key to studying modern quantum systems.
+            </p>
+        </main>
+    </div>
+
+    <footer>
+        <p>© 2025 Quantum Simulation Archives. All Rights Reserved.</p>
+        <button class="theme-toggle-button" onclick="toggleTheme()">
+            <span id="theme-icon">☾</span> 
+            <span id="theme-text">Dark Mode</span>
+        </button>
+    </footer>
+
+    <script>
+        // Check for saved theme preference on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+                updateThemeToggle(true);
+            } else {
+                updateThemeToggle(false);
+            }
+        });
+
+        // Function to update the toggle button text and icon
+        function updateThemeToggle(isDark) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (isDark) {
+                icon.textContent = '☀️';
+                text.textContent = 'Light Mode';
+            } else {
+                icon.textContent = '☾';
+                text.textContent = 'Dark Mode';
+            }
+        }
+
+        // Function to toggle between light and dark themes
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-theme');
+            if (isDark) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+            updateThemeToggle(isDark);
+        }
+    </script>
+</body>
+</html>

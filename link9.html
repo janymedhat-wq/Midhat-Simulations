@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dam Break Simulation: SPH and HPC</title>
+    <!-- Importing Space Mono font for a scientific aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* Light theme default */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* --- Dark Theme Overrides --- */
+        body.dark-theme {
+            background-color: #1a1a2e; /* Deep blue/purple */
+            color: #e0f7fa; /* Light cyan */
+        }
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #333;
+        }
+        body.dark-theme .main-content h1 {
+            color: #ff5757; /* Red accent */
+            text-shadow: 0 0 5px rgba(255, 87, 87, 0.5);
+        }
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(40px, 8vw, 80px);
+            padding-top: clamp(20px, 4vw, 40px);
+            border-top: 1px solid #ccc;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(15px, 4vw, 30px);
+        }
+        body.dark-theme .tutorial-content {
+            border-top: 1px solid #334e68;
+        }
+        .tutorial-content p { line-height: 1.6; max-width: 900px; }
+        .tutorial-content h2, .tutorial-content h3, .tutorial-content h4 { font-weight: 700; text-transform: uppercase; color: #333; }
+        body.dark-theme .tutorial-content h2, body.dark-theme .tutorial-content h3, body.dark-theme .tutorial-content h4 { color: #e0f7fa; }
+        .tutorial-content h2 { font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: 2px; margin-top: 2rem; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 1rem; margin-bottom: 0.5rem; }
+
+        pre { 
+            background-color: #e5e7eb; 
+            padding: 1.5rem; 
+            border-radius: 0.5rem; 
+            overflow-x: auto; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid #ddd; 
+        }
+        /* Black background for code in dark mode */
+        body.dark-theme pre {
+            background-color: #000000; 
+            border: 1px solid #334e68;
+        }
+        pre code { font-size: 0.9rem; color: #d63384; } /* Magenta for C/CUDA */
+        body.dark-theme pre code { color: #f28b82; } /* Coral in dark mode */
+        
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 20px;
+            margin: 1.5rem 0;
+            border-left: 5px solid #007bff;
+            background-color: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        body.dark-theme .equation-block {
+            border-left: 5px solid #79a6fe; /* Blue accent */
+            background-color: #252a42;
+            box-shadow: 0 0 10px rgba(121, 166, 254, 0.2);
+        }
+        
+        /* Visualization Area */
+        .viz-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin: 40px auto;
+            border: 2px solid #ff5757;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 87, 87, 0.5);
+            background-color: #ffffff;
+            position: relative;
+        }
+        body.dark-theme .viz-container {
+            border: 2px solid #79a6fe;
+            box-shadow: 0 0 20px rgba(121, 166, 254, 0.5);
+            background-color: #0f0f1a;
+        }
+        .viz-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .viz-container figcaption {
+            padding: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+            background-color: rgba(220, 220, 220, 0.8);
+            color: #333;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        body.dark-theme .viz-container figcaption {
+            background-color: rgba(0, 0, 0, 0.3);
+            color: #b3ccff;
+        }
+
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #ccc;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        body.dark-theme footer {
+            border-top: 1px solid #334e68;
+            color: #b3ccff;
+        }
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+        body.dark-theme .theme-toggle-button {
+            border: 1px solid #f0f0f0;
+            color: #f0f0f0;
+        }
+        body.dark-theme .theme-toggle-button:hover {
+            background-color: #f0f0f0;
+            color: #111;
+        }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 20px; text-align: left; }
+            .main-content h1 { letter-spacing: 2px; font-size: 2.5rem; }
+            .viz-container { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main title area -->
+        <div class="main-content">
+            <h1>3D DAM BREAK SIMULATION</h1>
+            <p>A high-performance computing approach to modeling complex free-surface hydrodynamics.</p>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="viz-container">
+            <img id="animation-display"
+                 src="dambreak3D.gif"
+                 alt="Conceptual 3D visualization of a dam break simulation using SPH, showing the free-surface fluid running down a channel and splashing."
+                 onerror="this.onerror=null; this.src='https://placehold.co/800x400/004c4c/ffffff?text=3D+Dam+Break+SPH+Visualization';"/>
+            <figcaption>Visualization of the moment of dam failure: SPH particles capture the fragmentation and interaction with the surrounding environment.</figcaption>
+        </div>
+        <!-- End Visualization -->
+
+        <!-- Tutorial Content -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Modeling Complex Hydrodynamics with SPH</h2>
+            <p>
+                The dam break problem involves the rapid transition from a static column of water to a highly dynamic, turbulent flow. Capturing the resulting free surface, spray, and air-water interface is challenging for traditional mesh-based methods (like Finite Volume). The **Smoothed Particle Hydrodynamics (SPH)** method, a mesh-free Lagrangian approach, is ideally suited for this due to its ability to handle large deformations and boundary interactions naturally.
+            </p>
+
+            <h3 id="governing-equations">1. The Fundamentals: Navier-Stokes</h3>
+            <p>
+                Regardless of the numerical method, the fluid motion is governed by the principles of mass and momentum conservation. Since SPH is a mesh-free method where particles move with the flow, we often use a slightly modified, compressible form of the equations.
+            </p>
+
+            <h4 id="continuity">Conservation of Mass (Continuity Equation)</h4>
+            <div class="equation-block">
+                $$
+                \frac{D \rho}{D t} = -\rho (\nabla \cdot \mathbf{v})
+                $$
+                <p class="text-xs mt-3">Where $\frac{D}{D t}$ is the material derivative, $\rho$ is density, and $\mathbf{v}$ is velocity.</p>
+            </div>
+
+            <h4 id="momentum">Conservation of Momentum (Navier-Stokes Equation)</h4>
+            <div class="equation-block">
+                $$
+                \frac{D \mathbf{v}}{D t} = -\frac{1}{\rho} \nabla P + \mathbf{g} + \nu \nabla^2 \mathbf{v}
+                $$
+                <p class="text-xs mt-3">This states that the acceleration of a fluid element is caused by pressure gradients ($\nabla P$), external body forces ($\mathbf{g}$ - usually gravity), and viscous forces ($\nu \nabla^2 \mathbf{v}$).</p>
+            </div>
+
+            <h3 id="sph-discretization">2. SPH Discretization and Kernels</h3>
+            <p>
+                SPH replaces the fluid domain with a set of discrete particles. Field values (like density, pressure, and velocity) are calculated by summing the contributions of neighboring particles, weighted by a smooth **kernel function** $W$.
+            </p>
+
+            <h4 id="kernel-function">The Smoothing Kernel $W(\mathbf{r}, h)$</h4>
+            <p>
+                The kernel $W$ (often cubic spline or Gaussian) defines the area of influence $h$ (the smoothing length). The core SPH approximation of any field variable $A$ at particle $i$ is:
+            </p>
+            <div class="equation-block">
+                $$
+                A_i = \sum_{j} m_j \frac{A_j}{\rho_j} W(\mathbf{r}_i - \mathbf{r}_j, h)
+                $$
+                <p class="text-xs mt-3">The sum runs over all neighboring particles $j$, with mass $m_j$ and density $\rho_j$.</p>
+            </div>
+
+            <h4 id="discrete-momentum">Discrete Momentum Equation (SPH Form)</h4>
+            <p>
+                The pressure gradient term in the momentum equation is discretised to be symmetric, which helps conserve linear and angular momentum.
+            </p>
+            <div class="equation-block">
+                $$
+                \frac{D \mathbf{v}_i}{D t} = -\sum_{j} m_j \left( \frac{P_i}{\rho_i^2} + \frac{P_j}{\rho_j^2} \right) \nabla_i W_{ij} + \mathbf{g} + \dots
+                $$
+                <p class="text-xs mt-3">Where $\nabla_i W_{ij}$ is the gradient of the kernel, calculated with respect to the coordinates of particle $i$, often the most computationally expensive part.</p>
+            </div>
+
+            <h3 id="hpc-implementation">3. HPC Parallelization with CUDA</h3>
+            <p>
+                A typical dam break simulation may use millions of particles. Since the forces on one particle depend only on its immediate neighbors (determined by the smoothing length $h$), the SPH algorithm is **highly local** and embarrassingly parallel. This makes it a perfect candidate for GPU acceleration using CUDA.
+            </p>
+
+            <h4 id="neighbor-search">The Critical Step: Neighbor Search</h4>
+            <p>
+                For $N$ particles, a direct $O(N^2)$ neighbor search is too slow. HPC implementations use spatial hashing (or grid-based methods) to reduce the complexity to $O(N)$ or $O(N \log N)$. This requires a complex data structure that is often managed on the CPU before being sent to the GPU.
+            </p>
+
+            <h4 id="cuda-kernel">Conceptual SPH Force Calculation Kernel (CUDA)</h4>
+            <p>
+                The core of the simulation is a CUDA kernel, where each GPU thread is responsible for calculating the pressure and viscous forces acting on a single particle.
+            </p>
+            <pre class="code-snippet"><code class="language-cuda">// cuda_sph_force_kernel.cu: Conceptual CUDA Kernel
+__global__ void sph_force_kernel(
+    float* d_pos,      // Particle positions
+    float* d_vel,      // Particle velocities
+    float* d_density,  // Particle densities
+    float* d_pressure, // Particle pressures
+    int* d_neighborList, // Pre-sorted list of neighbors
+    int num_particles,
+    float h,           // Smoothing length
+    float rest_density
+) {
+    // Get the global index of the particle this thread is responsible for
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i < num_particles) {
+        float3 accel = make_float3(0.0f, 0.0f, 0.0f);
+        float density_i = d_density[i];
+        float pressure_i = d_pressure[i];
+
+        // Loop over the pre-calculated neighbor list for particle i
+        // (Indices for start and end of neighbors for 'i' are stored elsewhere)
+        for (int j_idx = start_index[i]; j_idx < end_index[i]; ++j_idx) {
+            int j = d_neighborList[j_idx]; // Index of neighbor particle j
+
+            float3 r_ij = d_pos[i] - d_pos[j];
+            float W_grad = calculate_W_gradient(r_ij, h); // Calculate kernel gradient
+
+            float pressure_term = (pressure_i / (density_i * density_i)) + 
+                                  (d_pressure[j] / (d_density[j] * d_density[j]));
+
+            // Pressure Force Contribution (simplified)
+            accel -= pressure_term * W_grad * particle_mass[j];
+
+            // ... Add Viscous Force Contribution ...
+        }
+
+        // Add Gravity and Update Acceleration
+        accel.y -= GRAVITY;
+        d_vel[i] += accel * dt; // Euler integration for simplicity
+    }
+}
+// This kernel is launched with millions of threads, one per particle, achieving massive parallelism.
+</code></pre>
+
+            <h3 id="hpc-summary">Summary of HPC Benefits</h3>
+            <p>
+                A 3D dam break simulation benefits tremendously from HPC by partitioning the particle domain across **thousands of GPU cores**. The parallel execution allows the forces for all particles to be computed simultaneously, dramatically reducing the time-to-solution for complex phenomena like wave run-up, splashing, and air entrainment that are critical for engineering safety assessments.
+            </p>
+        </main>
+    </div>
+
+    <footer>
+        <p>© 2025 CFD Archives. All Rights Reserved.</p>
+        <button class="theme-toggle-button" onclick="toggleTheme()">
+            <span id="theme-icon">☾</span> 
+            <span id="theme-text">Dark Mode</span>
+        </button>
+    </footer>
+
+    <script>
+        // Check for saved theme preference on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+                updateThemeToggle(true);
+            } else {
+                updateThemeToggle(false);
+            }
+        });
+
+        // Function to update the toggle button text and icon
+        function updateThemeToggle(isDark) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (isDark) {
+                icon.textContent = '☀️';
+                text.textContent = 'Light Mode';
+            } else {
+                icon.textContent = '☾';
+                text.textContent = 'Dark Mode';
+            }
+        }
+
+        // Function to toggle between light and dark themes
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-theme');
+            if (isDark) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+            updateThemeToggle(isDark);
+        }
+    </script>
+</body>
+</html>

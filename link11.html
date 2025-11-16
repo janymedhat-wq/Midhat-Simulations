@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy-R DQN AI Agent - Project Documentation</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a monochrome, high-contrast look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff; /* White background */
+            color: #1f2937; /* Very dark gray text */
+        }
+        .container-border {
+            border: 2px solid #1f2937; /* Strong black border */
+            box-shadow: 6px 6px 0px 0px #9ca3af; /* Simple grayscale shadow */
+        }
+        .code-block {
+            background-color: #1f2937; /* Dark background for code */
+            color: #e5e7eb; /* Light gray text for contrast */
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #9ca3af;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header & Agent Demo Section -->
+        <header class="text-center mb-16">
+            <div class="inline-block p-4 container-border rounded-lg">
+                <h1 class="text-5xl font-extrabold mb-2">
+                    FLAPPY-R: DQN AGENT
+                </h1>
+                <p class="text-xl font-medium">
+                    Deep Q-Learning Implementation Showcase
+                </p>
+            </div>
+            
+            <div class="mt-10 mx-auto max-w-2xl container-border rounded-lg overflow-hidden p-2 bg-gray-100">
+                <p class="text-sm font-semibold mb-2 text-center">AGENT PERFORMANCE DEMO</p>
+                <!-- GIF Placeholder: Replace the src below with your animated GIF URL -->
+                <img 
+                    src="flappy-bird.gif" 
+                    onerror="this.onerror=null; this.src='https://placehold.co/700x400/9ca3af/1f2937?text=PLACE+YOUR+AGENT+GIF+HERE';" 
+                    alt="AI Agent playing Flappy Bird" 
+                    class="w-full h-auto object-cover container-border"
+                >
+            </div>
+        </header>
+
+        <!-- DQN Code Analysis Section -->
+        <section class="mb-16 mt-20">
+            <div class="pb-2 mb-8 border-b-2 border-gray-800">
+                <h2 class="text-3xl font-bold">
+                    The Deep Q-Network (DQN) Code
+                </h2>
+            </div>
+            
+            <p class="text-lg text-gray-700 mb-6">
+                This is the core Deep Q-Learning agent, implemented using TensorFlow.js. It handles the neural network definition, the $\epsilon$-greedy action policy, and the experience replay training loop.
+            </p>
+
+            <div class="code-block">
+                <pre><code>
+class DQNAgent {
+    constructor() {
+        // Initializes the primary Q-network and the target network.
+        this.model = this.createModel();
+        this.targetModel = this.createModel();
+        this.targetModel.setWeights(this.model.getWeights()); // Sync weights
+
+        // Hyperparameters
+        const LEARNING_RATE = 0.001;
+        this.GAMMA = 0.99;        // Discount factor for future rewards
+        this.EPSILON_START = 1.0; 
+        this.EPSILON_DECAY = 0.9995;
+        this.EPSILON_MIN = 0.01;
+        this.BATCH_SIZE = 32;
+        this.MEMORY_CAPACITY = 5000;
+        
+        this.optimizer = tf.train.adam(LEARNING_RATE);
+        this.memory = []; // Experience Replay buffer
+        this.epsilon = this.EPSILON_START;
+    }
+
+    /**
+     * Defines the structure of the Q-Network: 4 inputs, two hidden layers, 2 outputs.
+     * Input State: [Bird Y, Bird Velocity, Pipe X, Pipe Y] (normalized)
+     * Output: Q-values for [No Flap, Flap]
+     */
+    createModel() {
+        const model = tf.sequential();
+        model.add(tf.layers.dense({ units: 32, activation: 'relu', inputShape: [4] }));
+        model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
+        model.add(tf.layers.dense({ units: 2, activation: 'linear' })); 
+        model.compile({
+            optimizer: this.optimizer,
+            loss: 'meanSquaredError' // MSE is standard for DQN
+        });
+        return model;
+    }
+
+    /**
+     * Stores an experience tuple (s, a, r, s', done) into the memory buffer.
+     */
+    remember(state, action, reward, nextState, done) {
+        this.memory.push({ state, action, reward, nextState, done });
+        if (this.memory.length > this.MEMORY_CAPACITY) {
+            this.memory.shift(); // FIFO: Remove the oldest experience
+        }
+    }
+
+    /**
+     * Epsilon-Greedy Action Selection Policy.
+     */
+    act(state) {
+        if (Math.random() <= this.epsilon) {
+            // EXPLORATION: Random choice
+            return Math.floor(Math.random() * 2); 
+        } else {
+            // EXPLOITATION: Choose best action from Q-network
+            return tf.tidy(() => {
+                const stateTensor = tf.tensor2d([state]);
+                const qValues = this.model.predict(stateTensor);
+                return qValues.argMax(-1).dataSync()[0]; 
+            });
+        }
+    }
+
+    /**
+     * Trains the model using a randomly sampled batch of experiences.
+     */
+    async learn() {
+        if (this.memory.length < this.BATCH_SIZE) return;
+
+        // 1. Sample batch and prepare tensors
+        const batch = this.memory.sort(() => 0.5 - Math.random()).slice(0, this.BATCH_SIZE);
+        const states = tf.tensor2d(batch.map(m => m.state));
+        const nextStates = tf.tensor2d(batch.map(m => m.nextState));
+        const actions = batch.map(m => m.action);
+        const rewards = tf.tensor1d(batch.map(m => m.reward));
+        const dones = tf.tensor1d(batch.map(m => m.done));
+
+        // 2. Calculate Target Q-values (R + gamma * max_a' Q'(s', a')) using Target Network
+        const nextQ = this.targetModel.predict(nextStates);
+        const maxNextQ = nextQ.max(1); 
+        const targetQ = rewards.add(maxNextQ.mul(this.GAMMA).mul(dones.mul(-1).add(1)));
+
+        // 3. Create the updated target Q matrix for training
+        const targetTensor = tf.tidy(() => {
+            const currentQ = this.model.predict(states).arraySync();
+            for (let i = 0; i < this.BATCH_SIZE; i++) {
+                currentQ[i][actions[i]] = targetQ.arraySync()[i];
+            }
+            return tf.tensor2d(currentQ);
+        });
+
+        // 4. Fit/Train the main model
+        await this.model.fit(states, targetTensor, { epochs: 1, batchSize: this.BATCH_SIZE, verbose: 0 });
+
+        // Epsilon decay and memory cleanup
+        if (this.epsilon > this.EPSILON_MIN) {
+            this.epsilon *= this.EPSILON_DECAY;
+        }
+        tf.dispose([states, nextStates, rewards, dones, nextQ, maxNextQ, targetQ, targetTensor]);
+    }
+
+    /**
+     * Periodically synchronize the weights to the target network.
+     */
+    updateTargetModel() {
+        this.targetModel.setWeights(this.model.getWeights());
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- DQN Pseudo-code Section (NEW) -->
+        <section class="mb-16 mt-12">
+            <div class="pb-2 mb-8 border-b-2 border-gray-800">
+                <h2 class="text-3xl font-bold">
+                    DQN Training Algorithm (Pseudo-code)
+                </h2>
+            </div>
+            
+            <p class="text-lg text-gray-700 mb-6">
+                The high-level logic for training the Deep Q-Network is summarized below, detailing the interaction between the **Q-Network**, the **Target Network**, and **Experience Replay**.
+            </p>
+
+            <div class="code-block">
+                <pre><code>
+Initialize Q-network Q with random weights θ.
+Initialize target Q-network Q' with weights θ' = θ.
+Initialize Experience Replay buffer D (memory).
+
+For each EPISODE:
+  Initialize state s (initial game screen)
+  For t = 1 to T (steps within the episode):
+    
+    // 1. Action Selection (ε-Greedy Policy)
+    Select action a:
+      With probability ε (Epsilon), choose random action a
+      Otherwise, choose a = argmax_a Q(s, a; θ)
+    
+    // 2. Environment Interaction and Storage
+    Execute action a, observe reward r, and new state s'
+    Store experience (s, a, r, s') in buffer D
+    Set s = s'
+
+    // 3. Training Step (Sampling and Optimization)
+    Sample random mini-batch (s_j, a_j, r_j, s'_j) from D
+
+    // Calculate Target Value (Y_j)
+    Calculate target value y_j using the Target Network Q':
+      If s'_j is terminal (game over):
+        y_j = r_j
+      Else:
+        y_j = r_j + γ * max_a' Q'(s'_j, a'; θ')
+
+    // 4. Update Main Network
+    Perform a gradient descent step on (y_j - Q(s_j, a_j; θ))²
+    to update weights θ of the main Q-network.
+
+    // 5. Update Target Network
+    Every C steps (e.g., C=1000):
+      Update target network weights: θ' = θ
+
+  Decay ε (e.g., ε = ε * ε_decay)
+                </code></pre>
+            </div>
+        </section>
+
+
+        <footer class="text-center pt-8 border-t border-gray-400 mt-12">
+            <p class="text-gray-600 font-mono text-sm">A Reinforcement Learning Documentation Project</p>
+        </footer>
+    </div>
+
+</body>
+</html>

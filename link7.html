@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics-Informed Neural Networks (PINNs)</title>
+
+    <!-- Importing Space Mono font for a scientific aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* Light theme default */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* --- Dark Theme Overrides --- */
+        body.dark-theme {
+            background-color: #1a1a2e; /* Deep blue/purple */
+            color: #e0f7fa; /* Light cyan */
+        }
+
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(2rem, 8vw, 5rem);
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #333;
+        }
+        body.dark-theme .main-content h1 {
+            color: #79a6fe;
+            text-shadow: 0 0 5px rgba(121, 166, 254, 0.5);
+        }
+
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(20px, 5vw, 40px);
+            padding-top: clamp(15px, 3vw, 30px);
+            border-top: 1px solid #ccc;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(15px, 3vw, 30px);
+        }
+        body.dark-theme .tutorial-content {
+            border-top: 1px solid #334e68;
+        }
+
+        .tutorial-content p { line-height: 1.6; max-width: 900px; }
+        .tutorial-content h2, .tutorial-content h3 { font-weight: 700; text-transform: uppercase; color: #333; }
+        body.dark-theme .tutorial-content h2, body.dark-theme .tutorial-content h3 { color: #b3ccff; }
+        .tutorial-content h2 { font-size: clamp(1.2rem, 3vw, 1.8rem); letter-spacing: 1px; margin-top: 2.5rem; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        
+        /* Code Block Styling (Black) */
+        pre { 
+            background-color: #000000; 
+            padding: 1.5rem; 
+            border-radius: 0.5rem; 
+            overflow-x: auto; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid #222; 
+        }
+        pre code { font-size: 0.9rem; color: #a9f0a9; } 
+
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 20px;
+            margin: 1.5rem 0;
+            border-left: 5px solid #007bff;
+            background-color: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        body.dark-theme .equation-block {
+            border-left: 5px solid #ff5757; 
+            background-color: #252a42;
+            box-shadow: 0 0 10px rgba(255, 87, 87, 0.2);
+        }
+
+        /* GIF/Image Placeholder Styling */
+        .gif-placeholder {
+            margin: 2rem auto;
+            max-width: 90%;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background-color: #ccc; /* Light background for placeholder */
+        }
+        body.dark-theme .gif-placeholder {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .gif-placeholder img {
+            display: block;
+            width: 100%;
+            height: auto;
+            min-height: 200px; /* Ensure visibility */
+            object-fit: contain;
+        }
+
+
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #ccc;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        body.dark-theme footer {
+            border-top: 1px solid #334e68;
+            color: #b3ccff;
+        }
+
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+
+        body.dark-theme .theme-toggle-button {
+            border: 1px solid #f0f0f0;
+            color: #f0f0f0;
+        }
+        body.dark-theme .theme-toggle-button:hover {
+            background-color: #f0f0f0;
+            color: #111;
+        }
+        
+        /* New style for the icon container to control the SVG switch */
+        .icon-container {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 20px; text-align: center; align-items: center; }
+            .main-content h1 { letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main content area -->
+        <div class="main-content">
+            <h1>Physics-Informed Neural Networks</h1>
+        </div>
+
+        <!-- Tutorial Section (Core Technical Content) -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Model-Driven Computational Learning via PINNs</h2>
+            <p>
+                Physics-Informed Neural Networks (PINNs) offer a novel approach to solving partial differential equations (PDEs) by embedding the governing physics directly into the neural network's loss function. Unlike traditional numerical methods (like Finite Difference or Finite Element) that require mesh generation and complex discretization schemes, PINNs are **mesh-free** and rely on automatic differentiation to calculate the required derivatives.
+            </p>
+            <p>
+                This framework allows a single neural network to be trained not just on sparse observed data (like standard machine learning), but primarily on the laws of physics themselves, ensuring the solution is physically consistent across the entire domain.
+            </p>
+
+            ---
+
+            <h2>Visualization of the Training Process</h2>
+            <p>
+                The GIF below illustrates the training convergence. Initially, the network's prediction (blue line) is far from the true solution (red line), but as the loss function is minimized, the prediction rapidly converges to the physically accurate result.
+            </p>
+            <div class="gif-placeholder">
+                <img src="pinns.gif" 
+                     alt="Placeholder for an animated GIF showing PINN solution convergence over time."
+                     onerror="this.onerror=null;this.src='https://placehold.co/800x400/333333/ffffff?text=Image+Load+Failed';">
+            </div>
+            <p>
+             
+            </p>
+
+            ---
+
+            <h2>The PINN Architecture and Loss Function</h2>
+
+            <p>
+                A PINN consists of a standard feed-forward neural network that takes spatial and temporal coordinates $(x, t)$ as inputs and outputs the predicted solution $u(x, t)$. The training process is driven by a composite loss function designed to satisfy three main constraints: the PDE itself, the initial conditions (IC), and the boundary conditions (BC).
+            </p>
+
+            <h3>1. The General PDE Framework</h3>
+            <p>
+                Consider a general non-linear PDE on a domain $\Omega$, with $u$ as the solution variable (e.g., temperature, velocity, or concentration):
+            </p>
+            <div class="equation-block">
+                $$
+                \mathcal{F}(x, t, u, \nabla u, \nabla^2 u, \ldots) = 0 \quad \text{on } \Omega
+                $$
+            </div>
+
+            <h3>2. Automatic Differentiation and the Physics Loss ($L_{PDE}$)</h3>
+            <p>
+                The critical step in PINNs is using **Automatic Differentiation (AD)**—a feature built into modern deep learning frameworks like TensorFlow and PyTorch—to compute the derivatives of the predicted solution $u_{\theta}$ with respect to the input coordinates $(x, t)$.
+            </p>
+            <p>
+                The residual function $f(x, t)$ is defined by substituting the neural network output $u_{\theta}$ into the PDE operator $\mathcal{F}$. The Physics Loss $L_{PDE}$ then forces this residual to be zero at a set of collocation points $(x_i, t_i)$ sampled across the domain.
+            </p>
+            <div class="equation-block">
+                $$
+                L_{PDE} = \frac{1}{N_{f}} \sum_{i=1}^{N_{f}} \left| \mathcal{F}(x_i, t_i, u_{\theta}, \nabla u_{\theta}, \ldots) \right|^2 
+                $$
+                $$
+                \text{where } \mathcal{F}(x, t, u_{\theta}, \ldots) = f(x, t)
+                $$
+            </div>
+
+            <h3>3. The Total Loss Function</h3>
+            <p>
+                The total loss is a weighted sum of the PDE residual loss, the boundary condition loss ($L_{BC}$), and the initial condition loss ($L_{IC}$).
+            </p>
+            <div class="equation-block">
+                $$
+                L_{Total} = L_{PDE} + \lambda_{BC} L_{BC} + \lambda_{IC} L_{IC}
+                $$
+            </div>
+            <p>
+                The terms $L_{BC}$ and $L_{IC}$ are calculated as the mean squared error (MSE) between the neural network's prediction and the known values at the boundary and initial time points, respectively. The $\lambda$ values are weighting coefficients, often tuned to ensure proper network convergence.
+            </p>
+
+            ---
+
+            <h2>Example: Solving the 1D Burgers' Equation</h2>
+            <p>
+                The 1D Burgers' equation is a classic non-linear PDE used to model wave propagation and shock formation.
+            </p>
+            <div class="equation-block">
+                $$
+                \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} = \nu \frac{\partial^2 u}{\partial x^2}
+                $$
+            </div>
+
+            <h3>Conceptual Python/TensorFlow Implementation</h3>
+            <p>
+                This snippet demonstrates how a TensorFlow PINN class would define the neural network structure and, crucially, how it uses $tf.GradientTape$ for automatic differentiation to calculate the PDE residual (the physics loss term).
+            </p>
+            <pre><code>// conceptual_pinn_model.py
+import tensorflow as tf
+import numpy as np
+
+// Set physical parameter
+nu = 0.01 / np.pi // Viscosity
+
+class PINNSolver(tf.Module):
+    def __init__(self, layers):
+        // Initialize a standard dense neural network
+        self.model = tf.keras.Sequential([
+            tf.keras.layers.Dense(units, activation='tanh', 
+                                  kernel_initializer='glorot_normal')
+            for units in layers
+        ])
+    
+    @tf.function
+    def net_u(self, x, t):
+        // Input is a tensor [x, t]
+        X = tf.concat([x, t], axis=1)
+        return self.model(X)
+
+    @tf.function
+    def net_f(self, x, t):
+        // This function calculates the PDE residual (f_residual)
+        
+        // --- Automatic Differentiation Block ---
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch([x, t])
+            
+            // 1. Get the predicted solution u(x, t)
+            u = self.net_u(x, t)
+            
+            // 2. Compute first derivatives (u_t and u_x)
+            u_t = tape.gradient(u, t)
+            u_x = tape.gradient(u, x)
+            
+            // 3. Compute second derivative (u_xx)
+            u_xx = tape.gradient(u_x, x)
+        
+        del tape // Release resources
+        
+        // 4. Substitute derivatives into Burgers' Equation to find the residual
+        // f_residual = u_t + u * u_x - nu * u_xx
+        f_residual = u_t + u * u_x - nu * u_xx
+        
+        return f_residual
+
+    def loss(self, X_f, X_ic, X_bc, u_ic, u_bc):
+        // X_f are collocation points (x,t) for PDE residual
+        // X_ic are initial points (x,0)
+        // X_bc are boundary points (x_b, t)
+        
+        x_f, t_f = X_f[:, 0:1], X_f[:, 1:2]
+        x_ic, t_ic = X_ic[:, 0:1], X_ic[:, 1:2]
+        x_bc, t_bc = X_bc[:, 0:1], X_bc[:, 1:2]
+        
+        // Loss 1: Physics Loss (PDE Residual)
+        f_pred = self.net_f(x_f, t_f)
+        loss_f = tf.reduce_mean(tf.square(f_pred))
+
+        // Loss 2: Initial Condition Loss
+        u_ic_pred = self.net_u(x_ic, t_ic)
+        loss_ic = tf.reduce_mean(tf.square(u_ic - u_ic_pred))
+
+        // Loss 3: Boundary Condition Loss (assumes periodic BC: u(0,t) = u(L,t))
+        u_bc_pred = self.net_u(x_bc, t_bc)
+        loss_bc = tf.reduce_mean(tf.square(u_bc - u_bc_pred))
+        
+        // Total Loss (with weights, here lambda=1 for simplicity)
+        loss_total = loss_f + loss_ic + loss_bc
+        
+        return loss_total, loss_f, loss_ic, loss_bc
+        
+// The training loop would then minimize loss_total using an optimizer.
+</code></pre>
+
+            <p>
+                In practice, the success of a PINN often depends on judicious sampling of the collocation points and careful dynamic weighting of the different loss components (PDE, IC, and BC) to ensure a stable and accurate convergence to the true solution.
+            </p>
+
+        </main>
+    </div>
+
+    <!-- The Footer remains outside the container to span full width -->
+    <footer>
+        <p>© 2025 PINN Technical Document.</p>
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="theme-toggle-button">
+            <!-- Icon Container to hold the dynamic SVG -->
+            <span id="icon-container" class="icon-container">
+                <!-- Initial Sun Icon -->
+                <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </span>
+            <span id="theme-text">Dark Mode</span>
+        </button>
+    </footer>
+
+    <!-- JavaScript for Theme Toggle Logic -->
+    <script>
+        const body = document.body;
+        const toggleButton = document.getElementById('theme-toggle');
+        const themeText = document.getElementById('theme-text');
+        const iconContainer = document.getElementById('icon-container');
+
+        // SVG strings for switching
+        const sunIcon = `
+            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+        `;
+        const moonIcon = `
+            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        `;
+
+        // Function to update the theme state and UI
+        function updateThemeUI(isDark) {
+            if (!themeText || !iconContainer) {
+                console.error("Theme toggle elements not found.");
+                return;
+            }
+
+            if (isDark) {
+                body.classList.add('dark-theme');
+                themeText.textContent = 'Light Mode';
+                iconContainer.innerHTML = moonIcon; // Set Moon Icon
+            } else {
+                body.classList.remove('dark-theme');
+                themeText.textContent = 'Dark Mode';
+                iconContainer.innerHTML = sunIcon; // Set Sun Icon
+            }
+        }
+
+        // Apply saved theme or default to light on load
+        const savedTheme = localStorage.getItem('theme');
+        updateThemeUI(savedTheme === 'dark');
+
+        // Event listener for button click
+        toggleButton.addEventListener('click', () => {
+            const isDark = !body.classList.contains('dark-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeUI(isDark);
+        });
+    </script>
+</body>
+</html>

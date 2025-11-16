@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPC CFD Engine - Taylor-Couette Instability</title>
+
+    <!-- Importing a new, modern font: Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- MathJax for LaTeX typesetting -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* General body styles for a light, minimalist theme */
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #f0f0f0;
+            color: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Dark theme styles */
+        body.dark-theme {
+            background-color: #111;
+            color: #f0f0f0;
+        }
+
+        body.dark-theme .tutorial-content { border-top: 1px solid #444; }
+        body.dark-theme pre { background-color: #222; }
+        body.dark-theme .theme-toggle-button { color: #f0f0f0; border-color: #f0f0f0; }
+        body.dark-theme .theme-toggle-button:hover { background-color: #f0f0f0; color: #111; }
+        body.dark-theme .equation-block { border-left: 3px solid #7cb3ff; background-color: #222; }
+        body.dark-theme figcaption { color: #ccc; }
+
+        /* Container for the main content */
+        .container {
+            flex-grow: 1;
+            padding: clamp(30px, 5vw, 50px);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- Main Text Section --- */
+        .main-content h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(3rem, 10vw, 7rem);
+            line-height: 1;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #111; /* Changed to match theme */
+        }
+
+        /* --- Tutorial Section Styles --- */
+        .tutorial-content {
+            margin-top: clamp(50px, 10vw, 100px);
+            padding-top: clamp(25px, 5vw, 50px);
+            border-top: 1px solid #c0c0c0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(20px, 5vw, 40px);
+        }
+
+        .tutorial-content p { line-height: 1.6; max-width: 800px; }
+        .tutorial-content h2, .tutorial-content h3, .tutorial-content h4 { font-weight: 700; text-transform: uppercase; }
+        .tutorial-content h2 { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: 2px; }
+        .tutorial-content h3 { font-size: clamp(1rem, 2vw, 1.2rem); margin-top: 2rem; margin-bottom: 1rem; }
+
+        pre { background-color: #e5e7eb; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; width: 100%; box-sizing: border-box; }
+        pre code { font-size: 0.9rem; }
+
+        /* Style for LaTeX equations */
+        .equation-block {
+            padding: 10px;
+            margin: 1.5rem 0;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+
+        /* Image/Visualization Styling */
+        .viz-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto; /* Centering the visualization */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 0;
+        }
+        
+        body.dark-theme .viz-container { border-color: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+
+
+        .viz-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            min-height: 200px; /* Ensure placeholder visibility */
+        }
+        
+        .viz-container figcaption {
+            padding: 10px; 
+            font-size: 0.8rem; 
+            text-align: center;
+            background-color: #f8f8f8;
+        }
+        
+        body.dark-theme .viz-container figcaption {
+            background-color: #282828;
+        }
+
+
+        /* --- Footer and Theme Toggle --- */
+        footer {
+            margin-top: auto;
+            padding: 30px clamp(30px, 5vw, 50px);
+            border-top: 1px solid #c0c0c0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .theme-toggle-button {
+            background: none; border: 1px solid #111; color: #111; padding: 8px 16px;
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease; border-radius: 5px;
+            display: flex; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+
+        .theme-toggle-button:hover { background-color: #111; color: #f0f0f0; }
+        .dark-theme .theme-toggle-button { border: 1px solid #f0f0f0; color: #f0f0f0; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 30px; text-align: center; align-items: center; }
+            footer { flex-direction: column; justify-content: center; align-items: center; gap: 10px; }
+            .main-content h1 { letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main content area -->
+        <div class="main-content">
+            <h1>CFD HPC STACK</h1>
+        </div>
+
+        <!-- Tutorial Section (Core Technical Content) -->
+        <main class="tutorial-content">
+            <h2 class="books-title">Taylor-Couette Flow: Instability & High-Performance Computing</h2>
+            <p class="text-sm text-gray-500">A guide to developing a high-performance solver for rotational fluid dynamics, utilizing C++, CUDA, and Fortran/Python interoperability.</p>
+
+            <div class="content-section">
+                <p>
+                    Taylor-Couette (TC) flow—the motion of a viscous fluid confined between two rotating co-axial cylinders—is a classical problem in fluid mechanics, famous for demonstrating hydrodynamic instability. When the inner cylinder rotates fast enough, the flow transitions from smooth, purely circumferential motion to a stable, secondary pattern of toroidal (doughnut-shaped) counter-rotating vortices, known as Taylor Vortices. Solving this requires robust, high-performance computing (HPC) techniques.
+                </p>
+
+                <!-- Visualization GIF added here -->
+                <div class="viz-container">
+                    
+                    <img src="RayleighBenard2D.gif" 
+                         alt="Animated simulation showing the formation of toroidal Taylor vortices between two rotating cylinders." 
+                         onerror="this.onerror=null; this.src='https://placehold.co/800x400/9b59b6/white?text=Visualization+Not+Available+Use+Image+Tag';"/>
+                    <figcaption>Visualization of the Taylor-Couette Instability showing the characteristic counter-rotating toroidal vortices (Taylor Vortices).</figcaption>
+                </div>
+                <!-- End Visualization GIF -->
+
+                <h3>1. Governing Equations and Instability</h3>
+                <p>
+                    The TC flow simulation is governed by the same time-dependent, incompressible Navier-Stokes equations, but typically solved in cylindrical coordinates $(r, \theta, z)$. The onset of instability is characterized by the Taylor number ($Ta$), which relates rotational forces to viscous forces.
+                </p>
+
+                <h4 id="navier-stokes">Incompressible Navier-Stokes Equations (General Form)</h4>
+                <div class="equation-block">
+                    $$
+                    \frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla) \mathbf{u} = -\frac{1}{\rho} \nabla p + \nu \nabla^2 \mathbf{u} + \mathbf{f} \quad \text{(Momentum)}
+                    $$
+                    $$
+                    \nabla \cdot \mathbf{u} = 0 \quad \text{(Continuity)}
+                    $$
+                </div>
+
+                <p>
+                    The key challenge is capturing the critical Taylor number, $Ta_c$, at which the transition to Taylor vortices occurs. This requires high spatial resolution, making the problem ideal for GPU acceleration.
+                </p>
+
+                <h3>2. Core Solver Implementation in C++</h3>
+                <p>
+                    The primary code is structured in C++ for optimal memory management and object-oriented design. The fluid fields (velocity components $u_r, u_\theta, u_z$ and pressure $p$) are managed as 1D arrays for efficient, contiguous memory layout.
+                </p>
+                <pre class="code-snippet"><code class="language-cpp">// cfd_core.cpp: C++ Data Structures and Setup
+#include <vector>
+#include <iostream>
+
+// Simulation constants (dimensions, viscosity, angular speeds)
+const int NR = 256; // Radial cells
+const int NZ = 512; // Axial cells
+const double OMEGA_INNER = 1.0; // Inner cylinder angular velocity
+const double OMEGA_OUTER = 0.0; // Outer cylinder (fixed)
+
+class CFD_Grid {
+private:
+    std::vector<double> ur_field; // Radial velocity
+    std::vector<double> ut_field; // Tangential velocity
+    std::vector<double> p_field;  // Pressure
+
+public:
+    CFD_Grid() : ur_field(NR * NZ), ut_field(NR * NZ), p_field(NR * NZ) {
+        // Initialize fields, set boundary conditions (velocities at r_inner, r_outer)
+        std::cout << "CFD Grid initialized for " << NR * NZ << " points.\n";
+    }
+
+    // Utility function to get 1D index from 2D coordinates
+    int index(int r, int z) const {
+        if (r < 0 || r >= NR || z < 0 || z >= NZ) {
+            throw std::out_of_range("Grid index out of bounds.");
+        }
+        return r * NZ + z;
+    }
+
+    // Example of a Boundary Condition Setter (Inner Cylinder)
+    void set_inner_boundary(double R_inner) {
+        for (int z = 0; z < NZ; ++z) {
+            // Apply tangential velocity BC based on angular speed * radius
+            ut_field[index(0, z)] = OMEGA_INNER * R_inner;
+            ur_field[index(0, z)] = 0.0; // No slip, no radial flow
+        }
+    }
+
+    // Accessors for field data (used by CUDA/Fortran)
+    double* get_ur_data() { return ur_field.data(); }
+    size_t get_size() const { return NR * NZ; }
+};
+// End of C++ Core.</code></pre>
+
+                <h3>3. GPU Acceleration with CUDA</h3>
+                <p>
+                    The core iterative steps—like calculating the discrete Laplacian $\nabla^2$ or solving the Pressure Poisson Equation (PPE)—are massively parallel tasks. CUDA allows us to offload these computations to the GPU, offering a $100\times$ speedup over CPU implementations.
+                </p>
+                <h4 id="cuda-kernel-concept">Conceptual CUDA Kernel for Laplacian Calculation</h4>
+                <pre class="code-snippet"><code class="language-cpp">// cfd_cuda_kernel.cu: Conceptual CUDA Kernel for Laplacian (Part of PPE)
+
+// CUDA device function for the Laplacian operator in 2D (r, z)
+__global__ void calculate_laplacian_kernel(
+    const double* input_field, // e.g., Pressure P
+    double* laplace_output,    // e.g., RHS of PPE
+    const int NR,
+    const int NZ,
+    const double DR,
+    const double DZ)
+{
+    // Determine the global index in the 2D grid
+    int r = blockIdx.x * blockDim.x + threadIdx.x;
+    int z = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (r < NR && z < NZ) {
+        int idx = r * NZ + z;
+
+        // Simplified Laplacian (Finite Difference stencil on (r, z))
+        double P_center = input_field[idx];
+        double P_north = (z > 0) ? input_field[index(r, z - 1)] : P_center;
+        double P_south = (z < NZ - 1) ? input_field[index(r, z + 1)] : P_center;
+        double P_east = (r < NR - 1) ? input_field[index(r + 1, z)] : P_center;
+        double P_west = (r > 0) ? input_field[index(r - 1, z)] : P_center;
+
+        // Note: Actual Laplacian in cylindrical coordinates is more complex.
+        laplace_output[idx] = (P_north + P_south + P_east + P_west - 4.0 * P_center) / (DR * DR);
+    }
+}
+
+// Function to calculate 1D index (must be defined in the CUDA context)
+__device__ int index(int r, int z, int NZ) {
+    return r * NZ + z;
+}
+// End of CUDA Kernel.</code></pre>
+
+                <h3>4. High-Performance Interoperability</h3>
+                <p>
+                    Modern HPC often requires integrating components written in different languages, such as using high-speed Fortran modules for linear algebra or exposing the solver to Python for scripting and post-processing.
+                </p>
+
+                <h4>4.1 Fortran Module for Linear System Solver</h4>
+                <p>
+                    Fortran is often preferred for dense numerical work due to its optimized array handling and long history in scientific computing. Here is a conceptual Fortran subroutine for a dense matrix-vector multiply (essential for iterative solvers like Conjugate Gradient).
+                </p>
+                <pre class="code-snippet"><code class="language-fortran">! cfd_linalg.f90: Fortran Module for Matrix Operations
+module linalg_module
+  implicit none
+contains
+
+  ! Subroutine to perform C = A * B_vec
+  subroutine matrix_vector_multiply(N, A_matrix, B_vec, C_vec)
+    integer, intent(in) :: N          ! Dimension of matrix A and vectors
+    real(8), intent(in) :: A_matrix(N, N) ! Input matrix (Double precision)
+    real(8), intent(in) :: B_vec(N)       ! Input vector
+    real(8), intent(out) :: C_vec(N)      ! Output vector
+
+    integer :: i, j
+
+    C_vec = 0.0d0 ! Initialize output vector
+
+    do i = 1, N
+      do j = 1, N
+        C_vec(i) = C_vec(i) + A_matrix(i, j) * B_vec(j)
+      end do
+    end do
+  end subroutine matrix_vector_multiply
+
+end module linalg_module
+! End of Fortran Module.</code></pre>
+
+                <h4>4.2 Python Bindings (Pybind11) for Scripting</h4>
+                <p>
+                    To enable simulation control, parameter sweeping, and visualization using popular Python libraries (e.g., NumPy, Matplotlib), we use `pybind11` to create bindings for the core C++ objects.
+                </p>
+                <pre class="code-snippet"><code class="language-cpp">// pybind_module.cpp: Python Bindings using Pybind11
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h> // For std::vector conversion
+// Assume CFD_Grid class definition is accessible here
+
+namespace py = pybind11;
+
+PYBIND11_MODULE(cfd_tc_solver, m) {
+    m.doc() = "Pybind11 wrapper for the C++/CUDA Taylor-Couette CFD engine";
+
+    // Bind the core CFD_Grid class
+    py::class_<CFD_Grid>(m, "CFDGrid")
+        .def(py::init<>()) // Constructor
+        .def("get_size", &CFD_Grid::get_size, "Returns the total number of grid points.")
+        .def("set_inner_boundary", &CFD_Grid::set_inner_boundary, "Sets velocity BC on inner cylinder.")
+        
+        // Expose a method to get tangential velocity data as a list/array
+        .def("get_ut_data", [](CFD_Grid &g) {
+            // Note: In a real app, you'd convert to a NumPy array for efficiency
+            std::vector<double> ut_data(g.get_size());
+            // Copy data from internal field to the exposed vector
+            // (g.get_ut_data() is only exposed internally in this example)
+            // For simplicity, we just return an empty vector here
+            return ut_data; 
+        }, "Retrieves the tangential velocity field data.");
+
+    m.def("run_step", []() {
+        // Conceptual call to the main C++/CUDA integration function
+        std::cout << "Running one time-step using C++/CUDA/Fortran stack...\n";
+        return true;
+    }, "Executes a single, integrated time-step of the solver.");
+}
+// End of Pybind11 Bindings.</code></pre>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- The Footer remains outside the container to span full width -->
+    <footer>
+        <p>© 2025 HPC-CFD Technical Document.</p>
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="theme-toggle-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <span id="theme-text">Dark Mode</span>
+        </button>
+    </footer>
+
+    <!-- JavaScript for Theme Toggle Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            const toggleButton = document.getElementById('theme-toggle');
+
+            // --- Theme Toggle Logic ---
+            const isDarkMode = localStorage.getItem('theme') === 'dark';
+
+            const updateThemeUI = (isDark) => {
+                if (isDark) {
+                    body.classList.add('dark-theme');
+                    toggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span>Light Mode</span>`;
+                } else {
+                    body.classList.remove('dark-theme');
+                    toggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span>Dark Mode</span>`;
+                }
+            };
+
+            updateThemeUI(isDarkMode);
+
+            toggleButton.addEventListener('click', () => {
+                const isDark = body.classList.toggle('dark-theme');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI(isDark);
+            });
+        });
+    </script>
+</body>
+</html>
